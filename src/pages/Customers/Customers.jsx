@@ -1,26 +1,102 @@
-﻿import { useState, useMemo } from 'react';
-
-const CUSTOMERS = [
-  { name: 'Thabo N.', phone: '082 xxx 4521', current: 5, total: 6, lastVisit: '2 days ago' },
-  { name: 'Lerato M.', phone: '071 xxx 8890', current: 0, total: 6, lastVisit: '40 min ago', justRedeemed: true },
-  { name: 'Sipho K.', phone: '063 xxx 1102', current: 1, total: 6, lastVisit: '1 hr ago' },
-  { name: 'Amara D.', phone: '079 xxx 6634', current: 6, total: 6, lastVisit: '5 days ago' },
-  { name: 'Zanele P.', phone: '084 xxx 2298', current: 3, total: 6, lastVisit: '1 week ago' },
-  { name: 'Kagiso B.', phone: '072 xxx 7743', current: 2, total: 6, lastVisit: '3 days ago' },
-];
+﻿import { useState, useEffect, useMemo } from 'react';
+import { getCustomers, stampVisit } from '../../api/loyaltyApi';
+import { timeAgo } from '../../utils/formatTime';
 
 export default function Customers() {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [recording, setRecording] = useState(false);
+  const [result, setResult] = useState('');
+
+  const loadCustomers = () => {
+    getCustomers()
+      .then((data) => setCustomers(data))
+      .catch((err) => setError(err.message));
+  };
+
+  useEffect(() => {
+    loadCustomers();
+    setLoading(false);
+  }, []);
+
   const filtered = useMemo(
-    () => CUSTOMERS.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
-    [search]
+    () => customers.filter((c) => (c.name || '').toLowerCase().includes(search.toLowerCase())),
+    [customers, search]
   );
+
+  const handleRecordVisit = async (e) => {
+    e.preventDefault();
+    if (!phone.trim()) return;
+    setRecording(true);
+    setResult('');
+    setError('');
+    try {
+      const data = await stampVisit(phone.trim(), name.trim() || undefined);
+      if (data.isNew) {
+        setResult(`New customer added - Stamp 1 recorded.`);
+      } else if (data.isRewardUnlocked) {
+        setResult(`Reward unlocked for ${data.customer.name || phone}!`);
+      } else {
+        setResult(`Stamp ${data.customer.current_stamps} recorded.`);
+      }
+      setPhone('');
+      setName('');
+      loadCustomers();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRecording(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="main">
+        <h1 className="main__title">Customers</h1>
+        <p className="main__subtitle">Loading...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="main">
       <h1 className="main__title">Customers</h1>
       <p className="main__subtitle">See who's close to a reward.</p>
+
+      <form className="record-visit" onSubmit={handleRecordVisit}>
+        <div className="form-section__label">Record a visit</div>
+        <div className="record-visit__row">
+          <input
+            type="tel"
+            id="visit-phone"
+            name="phone"
+            className="form-input"
+            placeholder="Customer phone number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            id="visit-name"
+            name="name"
+            className="form-input"
+            placeholder="Name (optional, first visit only)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button className="save-button save-button--small" type="submit" disabled={recording}>
+            {recording ? 'Recording...' : 'Add stamp'}
+          </button>
+        </div>
+        {result && <p className="save-confirmation">{result}</p>}
+        {error && <p className="login-error">{error}</p>}
+      </form>
 
       <input
         type="text"
@@ -32,29 +108,27 @@ export default function Customers() {
 
       <div className="customers-list">
         {filtered.map((customer) => {
-          const isReady = customer.current >= customer.total;
-          const percent = Math.min(100, (customer.current / customer.total) * 100);
+          const total = customer.rule === 'every_11th' ? 11 : 6;
+          const current = customer.current_stamps || 0;
+          const isReady = current >= total;
+          const percent = Math.min(100, (current / total) * 100);
 
           return (
-            <div className="customer-row" key={customer.phone}>
+            <div className="customer-row" key={customer.id}>
               <div className="customer-row__info">
-                <span className="customer-row__name">{customer.name}</span>
-                <span className="customer-row__phone">{customer.phone} - Last visit {customer.lastVisit}</span>
+                <span className="customer-row__name">{customer.name || 'Unnamed'}</span>
+                <span className="customer-row__phone">{customer.phone} - Last visit {timeAgo(customer.last_visit)}</span>
               </div>
 
               <div className="customer-row__progress">
                 {isReady ? (
-                  <span className="status-pill status-pill--ready">
-                    {customer.justRedeemed ? 'Redeemed' : 'Reward ready'}
-                  </span>
+                  <span className="status-pill status-pill--ready">Reward ready</span>
                 ) : (
                   <>
                     <div className="progress-bar">
                       <div className="progress-bar__fill" style={{ width: percent + '%' }} />
                     </div>
-                    <span className="progress-label">
-                      {customer.current}/{customer.total}
-                    </span>
+                    <span className="progress-label">{current}/{total}</span>
                   </>
                 )}
               </div>
@@ -63,7 +137,9 @@ export default function Customers() {
         })}
 
         {filtered.length === 0 && (
-          <p style={{ color: 'var(--silver-500)', fontSize: '0.85rem' }}>No customers match "{search}".</p>
+          <p style={{ color: 'var(--silver-500)', fontSize: '0.85rem' }}>
+            {customers.length === 0 ? 'No customers yet.' : `No customers match "${search}".`}
+          </p>
         )}
       </div>
     </main>

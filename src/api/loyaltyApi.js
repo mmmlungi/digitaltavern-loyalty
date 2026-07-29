@@ -32,3 +32,6 @@ export const getCustomers = () => request('/api/loyalty-tavern/customers');
 export const getStats = () => request('/api/loyalty-tavern/stats');
 export const getActivity = () => request('/api/loyalty-tavern/activity');
 
+
+export const stampVisit = (phone, name) =>
+  request('/api/loyalty-tavern/stamp', { method: 'POST', body: JSON.stringify({ phone, name }) });

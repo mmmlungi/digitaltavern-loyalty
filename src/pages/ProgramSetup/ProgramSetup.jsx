@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
+import { getProgram, saveProgram } from '../../api/loyaltyApi';
 
 const RULE_OPTIONS = [
   { id: 'every_6th', title: 'Every 6th visit free', description: 'Customers earn a stamp per visit. Reward unlocks on the 6th.' },
@@ -8,12 +9,45 @@ const RULE_OPTIONS = [
 export default function ProgramSetup() {
   const [rule, setRule] = useState('every_6th');
   const [rewardDescription, setRewardDescription] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  useEffect(() => {
+    getProgram()
+      .then((data) => {
+        if (data) {
+          setRule(data.rule || 'every_6th');
+          setRewardDescription(data.reward_description || '');
+        }
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await saveProgram({ rule, rewardDescription });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <main className="main">
+        <h1 className="main__title">Program Setup</h1>
+        <p className="main__subtitle">Loading...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="main">
@@ -43,7 +77,11 @@ export default function ProgramSetup() {
 
       <p className="form-section__hint">Want to customize the messages customers receive? Head to WhatsApp Messages.</p>
 
-      <button className="save-button" onClick={handleSave}>Save program</button>
+      {error && <p className="login-error">{error}</p>}
+
+      <button className="save-button" onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving...' : 'Save program'}
+      </button>
       {saved && <div className="save-confirmation">Saved</div>}
     </main>
   );

@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../../api/loyaltyApi';
 
 export default function Login({ onLogin }) {
@@ -45,6 +45,10 @@ export default function Login({ onLogin }) {
         <button className="save-button login-card__submit" type="submit" disabled={loading}>
           {loading ? 'Logging in...' : 'Log in'}
         </button>
+
+        <p className="login-card__subtitle" style={{ marginTop: '16px', marginBottom: 0, textAlign: 'center' }}>
+          New here? <Link to="/signup" style={{ color: 'var(--blue-400)' }}>Start your free trial</Link>
+        </p>
       </form>
     </div>
   );

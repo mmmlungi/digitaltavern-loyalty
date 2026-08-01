@@ -20,6 +20,9 @@ async function request(path, options = {}) {
 export const login = (email, password) =>
   request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 
+export const signup = (data) =>
+  request('/api/auth/signup', { method: 'POST', body: JSON.stringify(data) });
+
 export const getProgram = () => request('/api/loyalty-tavern/program');
 export const saveProgram = (data) =>
   request('/api/loyalty-tavern/program', { method: 'PUT', body: JSON.stringify(data) });
@@ -31,7 +34,9 @@ export const saveMessage = (templateId, text) =>
 export const getCustomers = () => request('/api/loyalty-tavern/customers');
 export const getStats = () => request('/api/loyalty-tavern/stats');
 export const getActivity = () => request('/api/loyalty-tavern/activity');
-
-
 export const stampVisit = (phone, name) =>
   request('/api/loyalty-tavern/stamp', { method: 'POST', body: JSON.stringify({ phone, name }) });
+
+export const getWhatsappStatus = () => request('/api/loyalty-tavern/whatsapp-status');
+export const connectWhatsapp = (whapi_token, whapi_url) =>
+  request('/api/auth/connect-whatsapp', { method: 'POST', body: JSON.stringify({ whapi_token, whapi_url }) });

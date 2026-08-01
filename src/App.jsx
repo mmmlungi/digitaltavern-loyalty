@@ -2,6 +2,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Login from './pages/Login/Login'
+import Signup from './pages/Signup/Signup'
 import Overview from './pages/Overview/Overview'
 import ProgramSetup from './pages/ProgramSetup/ProgramSetup'
 import Customers from './pages/Customers/Customers'
@@ -29,6 +30,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={!token ? <Login onLogin={handleLogin} /> : <Navigate to="/" />} />
+      <Route path="/signup" element={!token ? <Signup onLogin={handleLogin} /> : <Navigate to="/" />} />
       <Route path="/" element={token ? <Layout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}>
         <Route index element={<Overview />} />
         <Route path="program-setup" element={<ProgramSetup />} />

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo, useRef } from 'react';
 import { getCustomers, stampVisit } from '../../api/loyaltyApi';
 import { timeAgo } from '../../utils/formatTime';
 
@@ -12,6 +12,7 @@ export default function Customers() {
   const [name, setName] = useState('');
   const [recording, setRecording] = useState(false);
   const [result, setResult] = useState('');
+  const submittingRef = useRef(false);
 
   const loadCustomers = () => {
     getCustomers()
@@ -31,7 +32,9 @@ export default function Customers() {
 
   const handleRecordVisit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return; // synchronous guard - blocks a second click instantly, before React state even updates
     if (!phone.trim()) return;
+    submittingRef.current = true;
     setRecording(true);
     setResult('');
     setError('');
@@ -39,6 +42,8 @@ export default function Customers() {
       const data = await stampVisit(phone.trim(), name.trim() || undefined);
       if (data.isNew) {
         setResult(`New customer added - Stamp 1 recorded.`);
+      } else if (data.isClaimed) {
+        setResult(`Reward claimed for ${data.customer.name || phone} - new cycle started.`);
       } else if (data.isRewardUnlocked) {
         setResult(`Reward unlocked for ${data.customer.name || phone}!`);
       } else {
@@ -51,6 +56,7 @@ export default function Customers() {
       setError(err.message);
     } finally {
       setRecording(false);
+      submittingRef.current = false;
     }
   };
 
